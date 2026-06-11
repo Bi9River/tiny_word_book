@@ -2,29 +2,34 @@
 	import { onMount } from 'svelte';
 	import { settings } from '$lib/settings';
 	import { testConnection, fetchWords, syncWordsToCloud } from '$lib/github';
+	import LanguageSelect from '$lib/LanguageSelect.svelte';
 
-	// 视图状态
+	type EntryType = 'word' | 'sentence';
+	interface Entry {
+		type?: EntryType;
+		word: string;
+		language: string;
+		translation: string;
+		notes: string;
+		created_at: string;
+	}
+
 	let currentView: 'loading' | 'settings' | 'dictionary' = 'loading';
-	
-	// 单词本数据
-	let words: any[] = [];
+	let words: Entry[] = [];
 	let currentSha: string | undefined = undefined;
-	
-	// 搜索与表单
+
 	let searchQuery = '';
-	let isAdding = false;
+	let addingType: EntryType | null = null;
 	let isSaving = false;
-	
-	// 新单词草稿
+
 	let draft = { word: '', language: '', translation: '', notes: '' };
 
-	// 响应式搜索过滤
-	$: filteredWords = words.filter(w => 
-		w.word.toLowerCase().includes(searchQuery.toLowerCase()) || 
-		w.translation.toLowerCase().includes(searchQuery.toLowerCase())
+	$: filteredWords = words.filter(
+		(w) =>
+			w.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
+			w.translation.toLowerCase().includes(searchQuery.toLowerCase())
 	);
 
-	// 初始化与鉴权
 	onMount(async () => {
 		if (!$settings.token || !$settings.repo || !$settings.username) {
 			currentView = 'settings';
@@ -36,9 +41,7 @@
 	async function loadDictionary() {
 		currentView = 'loading';
 		try {
-			// 先测试连通性
 			await testConnection();
-			// 拉取数据
 			const data = await fetchWords();
 			words = data.words;
 			currentSha = data.sha;
@@ -50,27 +53,36 @@
 		}
 	}
 
+	function startAdd(type: EntryType) {
+		addingType = type;
+		draft = { word: '', language: draft.language, translation: '', notes: '' };
+	}
+
+	function cancelAdd() {
+		addingType = null;
+	}
+
 	async function saveEntry() {
-		if (!draft.word || !draft.translation) return;
+		if (!draft.word || !draft.translation || !addingType) return;
 		isSaving = true;
-		
-		const newWord = {
-			...draft,
+
+		const newEntry: Entry = {
+			type: addingType,
+			word: draft.word,
+			language: draft.language,
+			translation: draft.translation,
+			notes: draft.notes,
 			created_at: new Date().toISOString()
 		};
 
-		// 插入到数组最前面
-		const updatedWords = [newWord, ...words];
+		const updatedWords = [newEntry, ...words];
 
 		try {
-			// 同步到 GitHub
 			currentSha = await syncWordsToCloud(updatedWords, currentSha);
 			words = updatedWords;
-			
-			// 重置表单
 			draft = { word: '', language: '', translation: '', notes: '' };
-			isAdding = false;
-			searchQuery = ''; // 清楚搜索以便看到新单词
+			addingType = null;
+			searchQuery = '';
 		} catch (error) {
 			alert('Failed to save entry.');
 			console.error(error);
@@ -79,7 +91,6 @@
 		}
 	}
 
-	// 设置页面的局部状态
 	let tempUsername = $settings.username;
 	let tempRepo = $settings.repo;
 	let tempToken = $settings.token;
@@ -93,7 +104,6 @@
 <main>
 	{#if currentView === 'loading'}
 		<div class="center-msg">Loading identity...</div>
-	
 	{:else if currentView === 'settings'}
 		<section class="config-view">
 			<header>
@@ -118,30 +128,74 @@
 
 			<button class="primary-btn" on:click={saveConfig}>Save configuration</button>
 		</section>
-
 	{:else if currentView === 'dictionary'}
 		<header class="dict-header">
 			<div class="toolbar">
-				<input type="text" class="search-bar" bind:value={searchQuery} placeholder="Search entries..." />
-				<button class="text-btn" on:click={() => currentView = 'settings'}>Config</button>
+				<input
+					type="text"
+					class="search-bar"
+					bind:value={searchQuery}
+					placeholder="Search entries..."
+				/>
+				<button class="text-btn" on:click={() => (currentView = 'settings')}>Config</button>
 			</div>
-			
-			{#if !isAdding}
-				<button class="add-trigger" on:click={() => isAdding = true}>+ Add entry</button>
+
+			{#if !addingType}
+				<div class="add-buttons">
+					<button class="add-trigger" on:click={() => startAdd('word')}>+ Add word</button>
+					<button class="add-trigger" on:click={() => startAdd('sentence')}>+ Add sentence</button>
+				</div>
 			{:else}
 				<div class="add-form">
-					<div class="form-row">
-						<input class="input-mono massive" type="text" bind:value={draft.word} placeholder="Word" autofocus />
-						<input class="input-sans small" type="text" bind:value={draft.language} placeholder="Lang (e.g. en, ja)" />
+					<div class="form-meta">
+						{addingType === 'word' ? 'New word' : 'New sentence'}
 					</div>
-					<textarea class="input-serif" bind:value={draft.translation} placeholder="Translation"></textarea>
-					<textarea class="input-sans notes" bind:value={draft.notes} placeholder="Notes (optional)"></textarea>
-					
+
+					{#if addingType === 'word'}
+						<div class="form-row">
+							<input
+								class="input-mono massive"
+								type="text"
+								bind:value={draft.word}
+								placeholder="Word"
+								autofocus
+							/>
+							<div class="lang-slot">
+								<LanguageSelect bind:value={draft.language} />
+							</div>
+						</div>
+						<textarea
+							class="input-serif"
+							bind:value={draft.translation}
+							placeholder="Translation"
+						></textarea>
+					{:else}
+						<textarea
+							class="input-serif sentence-input"
+							bind:value={draft.word}
+							placeholder="Sentence"
+						></textarea>
+						<div class="lang-slot solo">
+							<LanguageSelect bind:value={draft.language} />
+						</div>
+						<textarea
+							class="input-serif"
+							bind:value={draft.translation}
+							placeholder="Translation"
+						></textarea>
+					{/if}
+
+					<textarea
+						class="input-sans notes"
+						bind:value={draft.notes}
+						placeholder="Notes (optional)"
+					></textarea>
+
 					<div class="form-actions">
 						<button class="primary-btn" on:click={saveEntry} disabled={isSaving}>
 							{isSaving ? 'Saving...' : 'Save entry'}
 						</button>
-						<button class="text-btn" on:click={() => isAdding = false} disabled={isSaving}>Cancel</button>
+						<button class="text-btn" on:click={cancelAdd} disabled={isSaving}>Cancel</button>
 					</div>
 				</div>
 			{/if}
@@ -153,28 +207,38 @@
 			{/if}
 
 			{#each filteredWords as item}
-				<article class="word-entry">
-					<div class="entry-header">
-						<h2 class="word-text">{item.word}</h2>
-						{#if item.language}
-							<span class="lang-tag">{item.language}</span>
+				{#if item.type === 'sentence'}
+					<article class="sentence-entry">
+						<blockquote class="sentence-text">{item.word}</blockquote>
+						<div class="entry-meta">
+							{#if item.language}<span class="lang-tag">{item.language}</span>{/if}
+						</div>
+						<p class="translation-text">{item.translation}</p>
+						{#if item.notes}<p class="notes-text">{item.notes}</p>{/if}
+					</article>
+				{:else}
+					<article class="word-entry">
+						<div class="entry-header">
+							<h2 class="word-text">{item.word}</h2>
+							{#if item.language}
+								<span class="lang-tag">{item.language}</span>
+							{/if}
+						</div>
+						<p class="translation-text">{item.translation}</p>
+						{#if item.notes}
+							<p class="notes-text">{item.notes}</p>
 						{/if}
-					</div>
-					<p class="translation-text">{item.translation}</p>
-					{#if item.notes}
-						<p class="notes-text">{item.notes}</p>
-					{/if}
-				</article>
+					</article>
+				{/if}
 			{/each}
 		</div>
 	{/if}
 </main>
 
 <style>
-	/* -- 设计系统 (Tokens) -- */
 	:global(body) {
 		margin: 0;
-		background-color: #FAFAFA;
+		background-color: #fafafa;
 		color: #111111;
 		-webkit-font-smoothing: antialiased;
 	}
@@ -185,22 +249,22 @@
 		padding: 2rem 1.5rem 6rem;
 	}
 
-	/* 排版基础 */
-	.center-msg, .empty-state {
+	.center-msg,
+	.empty-state {
 		font-family: ui-sans-serif, system-ui, sans-serif;
 		font-size: 0.875rem;
 		color: #666;
 		margin-top: 4rem;
 	}
 
-	/* -- 字典正文排版 (The Signature) -- */
 	.word-list {
 		margin-top: 2rem;
 	}
 
-	.word-entry {
+	.word-entry,
+	.sentence-entry {
 		padding: 2rem 0;
-		border-bottom: 1px solid #E5E5E5; /* 结构性极细分隔线 */
+		border-bottom: 1px solid #e5e5e5;
 	}
 
 	.entry-header {
@@ -218,6 +282,21 @@
 		letter-spacing: -0.02em;
 	}
 
+	.sentence-text {
+		margin: 0 0 0.5rem 0;
+		padding: 0 0 0 1rem;
+		border-left: 2px solid #111;
+		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+		font-style: italic;
+		font-size: 1.4rem;
+		line-height: 1.5;
+		color: #111;
+	}
+
+	.entry-meta {
+		margin-bottom: 0.5rem;
+	}
+
 	.lang-tag {
 		font-family: ui-sans-serif, system-ui, sans-serif;
 		font-size: 0.75rem;
@@ -228,7 +307,7 @@
 
 	.translation-text {
 		margin: 0 0 0.5rem 0;
-		font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
 		font-size: 1.125rem;
 		line-height: 1.6;
 		color: #222;
@@ -242,13 +321,12 @@
 		color: #666;
 	}
 
-	/* -- 顶部工具栏与表单 -- */
 	.dict-header {
 		position: sticky;
 		top: 0;
-		background: #FAFAFA;
+		background: #fafafa;
 		padding: 1rem 0;
-		border-bottom: 2px solid #111; /* 顶部的粗结构线 */
+		border-bottom: 2px solid #111;
 		z-index: 10;
 	}
 
@@ -269,10 +347,17 @@
 		outline: none;
 	}
 
-	.search-bar::placeholder { color: #aaa; }
+	.search-bar::placeholder {
+		color: #aaa;
+	}
+
+	.add-buttons {
+		display: flex;
+		gap: 0.75rem;
+	}
 
 	.add-trigger {
-		width: 100%;
+		flex: 1;
 		text-align: left;
 		background: transparent;
 		border: 1px dashed #ccc;
@@ -283,48 +368,71 @@
 		color: #666;
 		transition: border-color 0.2s;
 	}
-	.add-trigger:hover { border-color: #111; color: #111; }
+	.add-trigger:hover {
+		border-color: #111;
+		color: #111;
+	}
 
-	/* 新增表单排版 */
 	.add-form {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
 	}
 
+	.form-meta {
+		font-family: ui-sans-serif, system-ui, sans-serif;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #888;
+	}
+
 	.form-row {
 		display: flex;
 		gap: 1rem;
+		align-items: stretch;
 	}
 
-	.add-form input, .add-form textarea {
+	.lang-slot {
+		width: 200px;
+		flex-shrink: 0;
+	}
+
+	.lang-slot.solo {
+		width: 100%;
+	}
+
+	.add-form input,
+	.add-form textarea {
 		appearance: none;
 		border: 1px solid transparent;
-		background: #F0F0F0;
+		background: #f0f0f0;
 		padding: 0.75rem;
 		border-radius: 0;
 		outline: none;
 		resize: vertical;
 	}
-	
-	.add-form input:focus, .add-form textarea:focus { background: #E8E8E8; }
+
+	.add-form input:focus,
+	.add-form textarea:focus {
+		background: #e8e8e8;
+	}
 
 	.input-mono.massive {
 		flex: 1;
 		font-family: ui-monospace, monospace;
 		font-size: 1.5rem;
 	}
-	
-	.input-sans.small {
-		width: 80px;
-		font-family: ui-sans-serif, sans-serif;
-		font-size: 0.875rem;
-	}
 
 	.input-serif {
 		font-family: ui-serif, serif;
 		font-size: 1.125rem;
 		min-height: 3rem;
+	}
+
+	.sentence-input {
+		font-style: italic;
+		min-height: 5rem;
 	}
 
 	.input-sans.notes {
@@ -339,9 +447,12 @@
 		margin-top: 0.5rem;
 	}
 
-	/* -- 按钮体系 -- */
-	button { appearance: none; border: none; font-family: ui-sans-serif, sans-serif; }
-	
+	button {
+		appearance: none;
+		border: none;
+		font-family: ui-sans-serif, sans-serif;
+	}
+
 	.primary-btn {
 		background: #111;
 		color: #fff;
@@ -349,7 +460,10 @@
 		font-size: 0.875rem;
 		cursor: pointer;
 	}
-	.primary-btn:disabled { background: #ccc; cursor: not-allowed; }
+	.primary-btn:disabled {
+		background: #ccc;
+		cursor: not-allowed;
+	}
 
 	.text-btn {
 		background: transparent;
@@ -359,14 +473,47 @@
 		text-decoration: underline;
 		cursor: pointer;
 	}
-	.text-btn:hover { color: #111; }
+	.text-btn:hover {
+		color: #111;
+	}
 
-	/* -- 设置视图 -- */
-	.config-view h1 { font-family: ui-serif, serif; font-size: 2rem; font-weight: normal; margin: 0 0 0.5rem 0;}
-	.config-view p { font-family: ui-sans-serif, sans-serif; font-size: 0.875rem; color: #666; margin-bottom: 2rem; }
-	
-	.field { margin-bottom: 1.5rem; }
-	.field label { display: block; font-family: ui-sans-serif, sans-serif; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; color: #333; }
-	.field input { width: 100%; box-sizing: border-box; padding: 0.75rem; border: 1px solid #ccc; background: transparent; font-family: ui-monospace, monospace; font-size: 0.875rem; outline: none; }
-	.field input:focus { border-color: #111; }
+	.config-view h1 {
+		font-family: ui-serif, serif;
+		font-size: 2rem;
+		font-weight: normal;
+		margin: 0 0 0.5rem 0;
+	}
+	.config-view p {
+		font-family: ui-sans-serif, sans-serif;
+		font-size: 0.875rem;
+		color: #666;
+		margin-bottom: 2rem;
+	}
+
+	.field {
+		margin-bottom: 1.5rem;
+	}
+	.field label {
+		display: block;
+		font-family: ui-sans-serif, sans-serif;
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-bottom: 0.5rem;
+		color: #333;
+	}
+	.field input {
+		width: 100%;
+		box-sizing: border-box;
+		padding: 0.75rem;
+		border: 1px solid #ccc;
+		background: transparent;
+		font-family: ui-monospace, monospace;
+		font-size: 0.875rem;
+		outline: none;
+	}
+	.field input:focus {
+		border-color: #111;
+	}
 </style>
