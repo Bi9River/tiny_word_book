@@ -32,6 +32,37 @@
 		new Set(words.map((w) => w.language).filter((l): l is string => Boolean(l)))
 	).sort((a, b) => a.localeCompare(b));
 
+	function escapeHtml(s: string): string {
+		return s
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	function escapeRegex(s: string): string {
+		return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	}
+
+	function highlight(text: string, query: string): string {
+		const safeText = text ?? '';
+		const q = query.trim();
+		if (!q) return escapeHtml(safeText);
+		const re = new RegExp(escapeRegex(q), 'gi');
+		let result = '';
+		let lastIndex = 0;
+		let match: RegExpExecArray | null;
+		while ((match = re.exec(safeText)) !== null) {
+			result += escapeHtml(safeText.slice(lastIndex, match.index));
+			result += `<strong class="hl">${escapeHtml(match[0])}</strong>`;
+			lastIndex = match.index + match[0].length;
+			if (match[0].length === 0) re.lastIndex++;
+		}
+		result += escapeHtml(safeText.slice(lastIndex));
+		return result;
+	}
+
 	$: filteredWords = (() => {
 		const q = searchQuery.trim().toLowerCase();
 		const { typeFilter, languageFilter } = $view;
@@ -348,12 +379,14 @@
 						<button class="edit-btn" on:click={() => startEdit(item)} aria-label="Edit entry">
 							edit
 						</button>
-						<blockquote class="sentence-text">{item.word}</blockquote>
+						<blockquote class="sentence-text">{@html highlight(item.word, searchQuery)}</blockquote>
 						<div class="entry-meta">
 							{#if item.language}<span class="lang-tag">{item.language}</span>{/if}
 						</div>
-						<p class="translation-text">{item.translation}</p>
-						{#if item.notes}<p class="notes-text">{item.notes}</p>{/if}
+						<p class="translation-text">{@html highlight(item.translation, searchQuery)}</p>
+						{#if item.notes}
+							<p class="notes-text">{@html highlight(item.notes, searchQuery)}</p>
+						{/if}
 					</article>
 				{:else}
 					<article class="word-entry">
@@ -361,14 +394,14 @@
 							edit
 						</button>
 						<div class="entry-header">
-							<h2 class="word-text">{item.word}</h2>
+							<h2 class="word-text">{@html highlight(item.word, searchQuery)}</h2>
 							{#if item.language}
 								<span class="lang-tag">{item.language}</span>
 							{/if}
 						</div>
-						<p class="translation-text">{item.translation}</p>
+						<p class="translation-text">{@html highlight(item.translation, searchQuery)}</p>
 						{#if item.notes}
-							<p class="notes-text">{item.notes}</p>
+							<p class="notes-text">{@html highlight(item.notes, searchQuery)}</p>
 						{/if}
 					</article>
 				{/if}
@@ -499,6 +532,12 @@
 		font-size: 0.875rem;
 		line-height: 1.5;
 		color: #666;
+	}
+
+	:global(.hl) {
+		font-weight: 700;
+		color: #111;
+		background: transparent;
 	}
 
 	.dict-header {
