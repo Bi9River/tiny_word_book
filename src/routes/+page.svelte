@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { settings } from '$lib/settings';
+	import { view } from '$lib/view';
 	import { testConnection, fetchWords, syncWordsToCloud } from '$lib/github';
 	import LanguageSelect from '$lib/LanguageSelect.svelte';
 
@@ -24,11 +25,25 @@
 
 	let draft = { word: '', language: '', translation: '', notes: '' };
 
-	$: filteredWords = words.filter(
-		(w) =>
-			w.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			w.translation.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+	$: availableLanguages = Array.from(
+		new Set(words.map((w) => w.language).filter((l): l is string => Boolean(l)))
+	).sort((a, b) => a.localeCompare(b));
+
+	$: filteredWords = (() => {
+		const q = searchQuery.trim().toLowerCase();
+		const { typeFilter, languageFilter } = $view;
+		return words.filter((w) => {
+			const entryType = w.type ?? 'word';
+			if (typeFilter !== 'all' && entryType !== typeFilter) return false;
+			if (languageFilter && w.language !== languageFilter) return false;
+			if (!q) return true;
+			return (
+				w.word.toLowerCase().includes(q) ||
+				w.translation.toLowerCase().includes(q) ||
+				(w.notes ?? '').toLowerCase().includes(q)
+			);
+		});
+	})();
 
 	onMount(async () => {
 		if (!$settings.token || !$settings.repo || !$settings.username) {
@@ -138,6 +153,44 @@
 					placeholder="Search entries..."
 				/>
 				<button class="text-btn" on:click={() => (currentView = 'settings')}>Config</button>
+			</div>
+
+			<div class="filter-bar">
+				<div class="seg" role="tablist" aria-label="Type filter">
+					<button
+						class="seg-btn"
+						class:active={$view.typeFilter === 'all'}
+						on:click={() => view.update((v) => ({ ...v, typeFilter: 'all' }))}
+					>
+						All
+					</button>
+					<button
+						class="seg-btn"
+						class:active={$view.typeFilter === 'word'}
+						on:click={() => view.update((v) => ({ ...v, typeFilter: 'word' }))}
+					>
+						Words
+					</button>
+					<button
+						class="seg-btn"
+						class:active={$view.typeFilter === 'sentence'}
+						on:click={() => view.update((v) => ({ ...v, typeFilter: 'sentence' }))}
+					>
+						Sentences
+					</button>
+				</div>
+
+				<select
+					class="lang-filter"
+					value={$view.languageFilter}
+					on:change={(e) =>
+						view.update((v) => ({ ...v, languageFilter: e.currentTarget.value }))}
+				>
+					<option value="">All languages</option>
+					{#each availableLanguages as lang}
+						<option value={lang}>{lang}</option>
+					{/each}
+				</select>
 			</div>
 
 			{#if !addingType}
@@ -349,6 +402,64 @@
 
 	.search-bar::placeholder {
 		color: #aaa;
+	}
+
+	.filter-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.seg {
+		display: inline-flex;
+		border: 1px solid #ddd;
+	}
+
+	.seg-btn {
+		appearance: none;
+		background: transparent;
+		border: none;
+		padding: 0.35rem 0.75rem;
+		font-family: ui-sans-serif, system-ui, sans-serif;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #666;
+		cursor: pointer;
+		border-right: 1px solid #ddd;
+	}
+	.seg-btn:last-child {
+		border-right: none;
+	}
+	.seg-btn:hover {
+		color: #111;
+	}
+	.seg-btn.active {
+		background: #111;
+		color: #fff;
+	}
+
+	.lang-filter {
+		appearance: none;
+		-webkit-appearance: none;
+		background: transparent;
+		border: 1px solid #ddd;
+		padding: 0.35rem 1.75rem 0.35rem 0.6rem;
+		font-family: ui-sans-serif, system-ui, sans-serif;
+		font-size: 0.75rem;
+		color: #333;
+		cursor: pointer;
+		border-radius: 0;
+		background-image: linear-gradient(45deg, transparent 50%, #888 50%),
+			linear-gradient(135deg, #888 50%, transparent 50%);
+		background-position: calc(100% - 12px) 50%, calc(100% - 7px) 50%;
+		background-size: 5px 5px, 5px 5px;
+		background-repeat: no-repeat;
+	}
+	.lang-filter:focus {
+		outline: none;
+		border-color: #111;
 	}
 
 	.add-buttons {
