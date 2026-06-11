@@ -21,9 +21,12 @@
 
 	let searchQuery = '';
 	let addingType: EntryType | null = null;
+	let editingId: string | null = null;
 	let isSaving = false;
 
 	let draft = { word: '', language: '', translation: '', notes: '' };
+
+	$: isEditing = editingId !== null;
 
 	$: availableLanguages = Array.from(
 		new Set(words.map((w) => w.language).filter((l): l is string => Boolean(l)))
@@ -79,37 +82,98 @@
 	}
 
 	function startAdd(type: EntryType) {
+		editingId = null;
 		addingType = type;
 		draft = { word: '', language: draft.language, translation: '', notes: '' };
 	}
 
-	function cancelAdd() {
+	function startEdit(item: Entry) {
+		editingId = item.created_at;
+		addingType = item.type ?? 'word';
+		draft = {
+			word: item.word,
+			language: item.language ?? '',
+			translation: item.translation ?? '',
+			notes: item.notes ?? ''
+		};
+	}
+
+	function closeForm() {
 		addingType = null;
+		editingId = null;
+	}
+
+	function nextUniqueTimestamp(): string {
+		const taken = new Set(words.map((w) => w.created_at));
+		let ts = new Date().toISOString();
+		while (taken.has(ts)) {
+			ts = new Date(Date.parse(ts) + 1).toISOString();
+		}
+		return ts;
 	}
 
 	async function saveEntry() {
 		if (!draft.word || !draft.translation || !addingType) return;
 		isSaving = true;
 
-		const newEntry: Entry = {
-			type: addingType,
-			word: draft.word,
-			language: draft.language,
-			translation: draft.translation,
-			notes: draft.notes,
-			created_at: new Date().toISOString()
-		};
+		const wasEditing = editingId !== null;
+		let updatedWords: Entry[];
 
-		const updatedWords = [newEntry, ...words];
+		if (wasEditing) {
+			updatedWords = words.map((w) =>
+				w.created_at === editingId
+					? {
+							...w,
+							type: addingType ?? w.type,
+							word: draft.word,
+							language: draft.language,
+							translation: draft.translation,
+							notes: draft.notes
+						}
+					: w
+			);
+		} else {
+			const newEntry: Entry = {
+				type: addingType,
+				word: draft.word,
+				language: draft.language,
+				translation: draft.translation,
+				notes: draft.notes,
+				created_at: nextUniqueTimestamp()
+			};
+			updatedWords = [newEntry, ...words];
+		}
 
 		try {
 			currentSha = await syncWordsToCloud(updatedWords, currentSha);
 			words = updatedWords;
 			draft = { word: '', language: '', translation: '', notes: '' };
 			addingType = null;
-			searchQuery = '';
+			editingId = null;
+			if (!wasEditing) searchQuery = '';
 		} catch (error) {
 			alert('Failed to save entry.');
+			console.error(error);
+		} finally {
+			isSaving = false;
+		}
+	}
+
+	async function deleteEntry() {
+		if (!editingId) return;
+		if (!confirm('Delete this entry? This cannot be undone.')) return;
+		isSaving = true;
+
+		const updatedWords = words.filter((w) => w.created_at !== editingId);
+
+		try {
+			currentSha = await syncWordsToCloud(updatedWords, currentSha);
+			words = updatedWords;
+			draft = { word: '', language: '', translation: '', notes: '' };
+			addingType = null;
+			editingId = null;
+		} catch (error) {
+			alert('Failed to delete entry.');
 			console.error(error);
 		} finally {
 			isSaving = false;
@@ -211,7 +275,11 @@
 			{:else}
 				<div class="add-form">
 					<div class="form-meta">
-						{addingType === 'word' ? 'New word' : 'New sentence'}
+						{#if isEditing}
+							{addingType === 'word' ? 'Edit word' : 'Edit sentence'}
+						{:else}
+							{addingType === 'word' ? 'New word' : 'New sentence'}
+						{/if}
 					</div>
 
 					{#if addingType === 'word'}
@@ -256,9 +324,14 @@
 
 					<div class="form-actions">
 						<button class="primary-btn" on:click={saveEntry} disabled={isSaving}>
-							{isSaving ? 'Saving...' : 'Save entry'}
+							{isSaving ? 'Saving...' : isEditing ? 'Save changes' : 'Save entry'}
 						</button>
-						<button class="text-btn" on:click={cancelAdd} disabled={isSaving}>Cancel</button>
+						<button class="text-btn" on:click={closeForm} disabled={isSaving}>Cancel</button>
+						{#if isEditing}
+							<button class="text-btn danger" on:click={deleteEntry} disabled={isSaving}>
+								Delete
+							</button>
+						{/if}
 					</div>
 				</div>
 			{/if}
@@ -269,9 +342,12 @@
 				<div class="empty-state">No entries found.</div>
 			{/if}
 
-			{#each filteredWords as item}
+			{#each filteredWords as item (item.created_at)}
 				{#if item.type === 'sentence'}
 					<article class="sentence-entry">
+						<button class="edit-btn" on:click={() => startEdit(item)} aria-label="Edit entry">
+							edit
+						</button>
 						<blockquote class="sentence-text">{item.word}</blockquote>
 						<div class="entry-meta">
 							{#if item.language}<span class="lang-tag">{item.language}</span>{/if}
@@ -281,6 +357,9 @@
 					</article>
 				{:else}
 					<article class="word-entry">
+						<button class="edit-btn" on:click={() => startEdit(item)} aria-label="Edit entry">
+							edit
+						</button>
 						<div class="entry-header">
 							<h2 class="word-text">{item.word}</h2>
 							{#if item.language}
@@ -326,8 +405,44 @@
 
 	.word-entry,
 	.sentence-entry {
-		padding: 2rem 0;
+		position: relative;
+		padding: 2rem 3rem 2rem 0;
 		border-bottom: 1px solid #e5e5e5;
+	}
+
+	.edit-btn {
+		position: absolute;
+		top: 1.5rem;
+		right: 0;
+		appearance: none;
+		background: transparent;
+		border: none;
+		padding: 0.25rem 0.4rem;
+		font-family: ui-sans-serif, system-ui, sans-serif;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #ccc;
+		cursor: pointer;
+		opacity: 0.5;
+		transition:
+			opacity 0.15s,
+			color 0.15s;
+	}
+
+	.word-entry:hover .edit-btn,
+	.sentence-entry:hover .edit-btn,
+	.edit-btn:focus {
+		opacity: 1;
+		color: #111;
+		outline: none;
+	}
+
+	@media (hover: none) {
+		.edit-btn {
+			opacity: 1;
+			color: #888;
+		}
 	}
 
 	.entry-header {
@@ -596,6 +711,14 @@
 	}
 	.text-btn:hover {
 		color: #111;
+	}
+
+	.text-btn.danger {
+		color: #b00020;
+		margin-left: auto;
+	}
+	.text-btn.danger:hover {
+		color: #7a0016;
 	}
 
 	.config-view h1 {
