@@ -388,7 +388,7 @@
 	main {
 		max-width: 640px;
 		margin: 0 auto;
-		padding: 2rem 1.5rem 6rem;
+		padding: 2rem 1.5rem calc(4rem + env(safe-area-inset-bottom));
 	}
 
 	.center-msg,
@@ -454,10 +454,12 @@
 
 	.word-text {
 		margin: 0;
+		min-width: 0;
 		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
 		font-size: 2.25rem;
 		font-weight: 400;
 		letter-spacing: -0.02em;
+		overflow-wrap: anywhere;
 	}
 
 	.sentence-text {
@@ -531,6 +533,7 @@
 
 	.filter-bar {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.75rem;
 		margin-bottom: 1rem;
@@ -625,6 +628,7 @@
 
 	.form-row {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 1rem;
 		align-items: stretch;
 	}
@@ -655,7 +659,8 @@
 	}
 
 	.input-mono.massive {
-		flex: 1;
+		flex: 1 1 200px;
+		min-width: 0;
 		font-family: ui-monospace, monospace;
 		font-size: 1.5rem;
 	}
@@ -679,6 +684,8 @@
 
 	.form-actions {
 		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
 		gap: 1rem;
 		margin-top: 0.5rem;
 	}
@@ -759,5 +766,88 @@
 	}
 	.field input:focus {
 		border-color: #111;
+	}
+
+	@media (max-width: 480px) {
+		main {
+			padding: 1.25rem 1rem calc(3rem + env(safe-area-inset-bottom));
+		}
+
+		.dict-header {
+			padding: 0.75rem 0;
+		}
+
+		.toolbar {
+			gap: 0.75rem;
+			margin-bottom: 0.75rem;
+		}
+
+		.search-bar {
+			font-size: 0.9375rem;
+		}
+
+		.filter-bar {
+			gap: 0.5rem;
+			margin-bottom: 0.75rem;
+		}
+
+		.seg-btn {
+			padding: 0.4rem 0.6rem;
+		}
+
+		.lang-filter {
+			max-width: 50%;
+		}
+
+		.add-buttons {
+			gap: 0.5rem;
+		}
+
+		.add-trigger {
+			padding: 0.75rem;
+			text-align: center;
+		}
+
+		.word-list {
+			margin-top: 1.25rem;
+		}
+
+		.word-entry,
+		.sentence-entry {
+			padding: 1.25rem 2.5rem 1.25rem 0;
+		}
+
+		.edit-btn {
+			top: 1rem;
+		}
+
+		.word-text {
+			font-size: 1.75rem;
+		}
+
+		.sentence-text {
+			font-size: 1.15rem;
+			padding-left: 0.75rem;
+		}
+
+		.translation-text {
+			font-size: 1rem;
+		}
+
+		.input-mono.massive {
+			font-size: 1.25rem;
+		}
+
+		.input-serif {
+			font-size: 1rem;
+		}
+
+		.lang-slot {
+			width: 100%;
+		}
+
+		.config-view h1 {
+			font-size: 1.6rem;
+		}
 	}
 </style>
