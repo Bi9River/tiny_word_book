@@ -5,6 +5,8 @@
 	import { theme, toggleTheme } from '$lib/theme';
 	import { testConnection, fetchWords, syncWordsToCloud } from '$lib/github';
 	import LanguageSelect from '$lib/LanguageSelect.svelte';
+	import { resolveLanguage } from '$lib/languages';
+	import { swedishOrdklasser } from '$lib/pos';
 
 	type EntryType = 'word' | 'sentence';
 	interface Entry {
@@ -13,6 +15,7 @@
 		language: string;
 		translation: string;
 		notes: string;
+		pos?: string;
 		created_at: string;
 	}
 
@@ -25,9 +28,10 @@
 	let editingId: string | null = null;
 	let isSaving = false;
 
-	let draft = { word: '', language: '', translation: '', notes: '' };
+	let draft = { word: '', language: '', translation: '', notes: '', pos: '' };
 
 	$: isEditing = editingId !== null;
+	$: isSwedishDraft = resolveLanguage(draft.language)?.code === 'sv';
 
 	$: availableLanguages = Array.from(
 		new Set(words.map((w) => w.language).filter((l): l is string => Boolean(l)))
@@ -75,7 +79,8 @@
 			return (
 				w.word.toLowerCase().includes(q) ||
 				(w.translation ?? '').toLowerCase().includes(q) ||
-				(w.notes ?? '').toLowerCase().includes(q)
+				(w.notes ?? '').toLowerCase().includes(q) ||
+				(w.pos ?? '').toLowerCase().includes(q)
 			);
 		});
 
@@ -116,7 +121,7 @@
 	function startAdd(type: EntryType) {
 		editingId = null;
 		addingType = type;
-		draft = { word: '', language: draft.language, translation: '', notes: '' };
+		draft = { word: '', language: draft.language, translation: '', notes: '', pos: '' };
 	}
 
 	function startEdit(item: Entry) {
@@ -126,7 +131,8 @@
 			word: item.word,
 			language: item.language ?? '',
 			translation: item.translation ?? '',
-			notes: item.notes ?? ''
+			notes: item.notes ?? '',
+			pos: item.pos ?? ''
 		};
 	}
 
@@ -151,6 +157,8 @@
 		const wasEditing = editingId !== null;
 		let updatedWords: Entry[];
 
+		const posForType = addingType === 'word' && isSwedishDraft ? draft.pos : '';
+
 		if (wasEditing) {
 			updatedWords = words.map((w) =>
 				w.created_at === editingId
@@ -160,7 +168,8 @@
 							word: draft.word,
 							language: draft.language,
 							translation: draft.translation,
-							notes: draft.notes
+							notes: draft.notes,
+							pos: posForType
 						}
 					: w
 			);
@@ -171,6 +180,7 @@
 				language: draft.language,
 				translation: draft.translation,
 				notes: draft.notes,
+				pos: posForType,
 				created_at: nextUniqueTimestamp()
 			};
 			updatedWords = [newEntry, ...words];
@@ -179,7 +189,7 @@
 		try {
 			currentSha = await syncWordsToCloud(updatedWords, currentSha);
 			words = updatedWords;
-			draft = { word: '', language: '', translation: '', notes: '' };
+			draft = { word: '', language: '', translation: '', notes: '', pos: '' };
 			addingType = null;
 			editingId = null;
 			if (!wasEditing) searchQuery = '';
@@ -201,7 +211,7 @@
 		try {
 			currentSha = await syncWordsToCloud(updatedWords, currentSha);
 			words = updatedWords;
-			draft = { word: '', language: '', translation: '', notes: '' };
+			draft = { word: '', language: '', translation: '', notes: '', pos: '' };
 			addingType = null;
 			editingId = null;
 		} catch (error) {
@@ -330,6 +340,14 @@
 								<LanguageSelect bind:value={draft.language} />
 							</div>
 						</div>
+						{#if isSwedishDraft}
+							<select class="pos-select" bind:value={draft.pos}>
+								<option value="">Ordklass (optional)</option>
+								{#each swedishOrdklasser as ord}
+									<option value={ord}>{ord}</option>
+								{/each}
+							</select>
+						{/if}
 						<textarea
 							class="input-serif"
 							bind:value={draft.translation}
@@ -403,6 +421,9 @@
 							<h2 class="word-text">{@html highlight(item.word, searchQuery)}</h2>
 							{#if item.language}
 								<span class="lang-tag">{item.language}</span>
+							{/if}
+							{#if item.pos}
+								<span class="pos-tag">{item.pos}</span>
 							{/if}
 						</div>
 						{#if item.translation}
@@ -569,6 +590,13 @@
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		color: var(--fg-faint);
+	}
+
+	.pos-tag {
+		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+		font-style: italic;
+		font-size: 0.8125rem;
+		color: var(--fg-muted);
 	}
 
 	.translation-text {
@@ -774,6 +802,29 @@
 		font-family: ui-sans-serif, sans-serif;
 		font-size: 0.875rem;
 		min-height: 3rem;
+	}
+
+	.pos-select {
+		appearance: none;
+		-webkit-appearance: none;
+		background: var(--input-bg);
+		color: var(--fg);
+		border: 1px solid transparent;
+		padding: 0.5rem 1.75rem 0.5rem 0.6rem;
+		border-radius: 0;
+		outline: none;
+		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+		font-style: italic;
+		font-size: 0.9375rem;
+		align-self: flex-start;
+		background-image: linear-gradient(45deg, transparent 50%, var(--fg-faint) 50%),
+			linear-gradient(135deg, var(--fg-faint) 50%, transparent 50%);
+		background-position: calc(100% - 12px) 50%, calc(100% - 7px) 50%;
+		background-size: 5px 5px, 5px 5px;
+		background-repeat: no-repeat;
+	}
+	.pos-select:focus {
+		background-color: var(--input-bg-focus);
 	}
 
 	.form-actions {

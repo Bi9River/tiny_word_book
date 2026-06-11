@@ -37,6 +37,17 @@ export const languages: Language[] = [
 	{ code: 'la', native: 'Latina', english: 'Latin', aliases: ['拉丁语'] }
 ];
 
+export function resolveLanguage(value: string): Language | undefined {
+	const v = value.trim().toLowerCase();
+	if (!v) return undefined;
+	return languages.find((lang) => {
+		const haystack = [lang.code, lang.native, lang.english, ...lang.aliases].map((s) =>
+			s.toLowerCase()
+		);
+		return haystack.includes(v);
+	});
+}
+
 export function searchLanguages(query: string, limit = 8): Language[] {
 	const q = query.trim().toLowerCase();
 	if (!q) return languages.slice(0, limit);
