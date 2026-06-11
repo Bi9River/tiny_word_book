@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { settings } from '$lib/settings';
 	import { view } from '$lib/view';
+	import { theme, toggleTheme } from '$lib/theme';
 	import { testConnection, fetchWords, syncWordsToCloud } from '$lib/github';
 	import LanguageSelect from '$lib/LanguageSelect.svelte';
 
@@ -257,6 +258,9 @@
 					bind:value={searchQuery}
 					placeholder="Search entries..."
 				/>
+				<button class="text-btn" on:click={toggleTheme} aria-label="Toggle theme">
+					{$theme === 'dark' ? 'Light' : 'Dark'}
+				</button>
 				<button class="text-btn" on:click={() => (currentView = 'settings')}>Config</button>
 			</div>
 
@@ -411,10 +415,54 @@
 </main>
 
 <style>
+	:global(:root) {
+		--bg: #fafafa;
+		--fg: #111111;
+		--fg-strong: #000000;
+		--fg-mid: #333333;
+		--fg-dim: #444444;
+		--fg-muted: #666666;
+		--fg-faint: #888888;
+		--placeholder: #aaaaaa;
+		--hairline: #cccccc;
+		--hairline-2: #dddddd;
+		--separator: #e5e5e5;
+		--input-bg: #f0f0f0;
+		--input-bg-focus: #e8e8e8;
+		--primary-bg: #111111;
+		--primary-fg: #ffffff;
+		--primary-fg-muted: #cccccc;
+		--surface: #ffffff;
+		--danger: #b00020;
+		--danger-hover: #7a0016;
+	}
+
+	:global([data-theme='dark']) {
+		--bg: #0e0e0e;
+		--fg: #ededed;
+		--fg-strong: #ffffff;
+		--fg-mid: #c8c8c8;
+		--fg-dim: #b0b0b0;
+		--fg-muted: #909090;
+		--fg-faint: #707070;
+		--placeholder: #555555;
+		--hairline: #3a3a3a;
+		--hairline-2: #2a2a2a;
+		--separator: #232323;
+		--input-bg: #1c1c1c;
+		--input-bg-focus: #262626;
+		--primary-bg: #ededed;
+		--primary-fg: #0e0e0e;
+		--primary-fg-muted: #555555;
+		--surface: #181818;
+		--danger: #ff7373;
+		--danger-hover: #ff9999;
+	}
+
 	:global(body) {
 		margin: 0;
-		background-color: #fafafa;
-		color: #111111;
+		background-color: var(--bg);
+		color: var(--fg);
 		-webkit-font-smoothing: antialiased;
 	}
 
@@ -428,7 +476,7 @@
 	.empty-state {
 		font-family: ui-sans-serif, system-ui, sans-serif;
 		font-size: 0.875rem;
-		color: #666;
+		color: var(--fg-muted);
 		margin-top: 4rem;
 	}
 
@@ -440,7 +488,7 @@
 	.sentence-entry {
 		position: relative;
 		padding: 2rem 3rem 2rem 0;
-		border-bottom: 1px solid #e5e5e5;
+		border-bottom: 1px solid var(--separator);
 	}
 
 	.edit-btn {
@@ -455,7 +503,7 @@
 		font-size: 0.75rem;
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
-		color: #ccc;
+		color: var(--hairline);
 		cursor: pointer;
 		opacity: 0.5;
 		transition:
@@ -467,14 +515,14 @@
 	.sentence-entry:hover .edit-btn,
 	.edit-btn:focus {
 		opacity: 1;
-		color: #111;
+		color: var(--fg);
 		outline: none;
 	}
 
 	@media (hover: none) {
 		.edit-btn {
 			opacity: 1;
-			color: #888;
+			color: var(--fg-faint);
 		}
 	}
 
@@ -493,17 +541,18 @@
 		font-weight: 400;
 		letter-spacing: -0.02em;
 		overflow-wrap: anywhere;
+		color: var(--fg);
 	}
 
 	.sentence-text {
 		margin: 0 0 0.5rem 0;
 		padding: 0 0 0 1rem;
-		border-left: 2px solid #111;
+		border-left: 2px solid var(--fg);
 		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
 		font-style: italic;
 		font-size: 1.4rem;
 		line-height: 1.5;
-		color: #111;
+		color: var(--fg);
 	}
 
 	.entry-meta {
@@ -515,7 +564,7 @@
 		font-size: 0.75rem;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: #888;
+		color: var(--fg-faint);
 	}
 
 	.translation-text {
@@ -523,7 +572,7 @@
 		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
 		font-size: 1.125rem;
 		line-height: 1.6;
-		color: #222;
+		color: var(--fg-mid);
 	}
 
 	.notes-text {
@@ -531,21 +580,21 @@
 		font-family: ui-sans-serif, system-ui, sans-serif;
 		font-size: 0.875rem;
 		line-height: 1.5;
-		color: #666;
+		color: var(--fg-muted);
 	}
 
 	:global(.hl) {
 		font-weight: 700;
-		color: #111;
+		color: var(--fg-strong);
 		background: transparent;
 	}
 
 	.dict-header {
 		position: sticky;
 		top: 0;
-		background: #fafafa;
+		background: var(--bg);
 		padding: 1rem 0;
-		border-bottom: 2px solid #111;
+		border-bottom: 2px solid var(--fg);
 		z-index: 10;
 	}
 
@@ -560,6 +609,7 @@
 		appearance: none;
 		border: none;
 		background: transparent;
+		color: var(--fg);
 		font-family: ui-sans-serif, system-ui, sans-serif;
 		font-size: 1rem;
 		padding: 0;
@@ -567,7 +617,7 @@
 	}
 
 	.search-bar::placeholder {
-		color: #aaa;
+		color: var(--placeholder);
 	}
 
 	.filter-bar {
@@ -580,7 +630,7 @@
 
 	.seg {
 		display: inline-flex;
-		border: 1px solid #ddd;
+		border: 1px solid var(--hairline-2);
 	}
 
 	.seg-btn {
@@ -592,41 +642,41 @@
 		font-size: 0.75rem;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: #666;
+		color: var(--fg-muted);
 		cursor: pointer;
-		border-right: 1px solid #ddd;
+		border-right: 1px solid var(--hairline-2);
 	}
 	.seg-btn:last-child {
 		border-right: none;
 	}
 	.seg-btn:hover {
-		color: #111;
+		color: var(--fg);
 	}
 	.seg-btn.active {
-		background: #111;
-		color: #fff;
+		background: var(--primary-bg);
+		color: var(--primary-fg);
 	}
 
 	.lang-filter {
 		appearance: none;
 		-webkit-appearance: none;
 		background: transparent;
-		border: 1px solid #ddd;
+		border: 1px solid var(--hairline-2);
 		padding: 0.35rem 1.75rem 0.35rem 0.6rem;
 		font-family: ui-sans-serif, system-ui, sans-serif;
 		font-size: 0.75rem;
-		color: #333;
+		color: var(--fg-mid);
 		cursor: pointer;
 		border-radius: 0;
-		background-image: linear-gradient(45deg, transparent 50%, #888 50%),
-			linear-gradient(135deg, #888 50%, transparent 50%);
+		background-image: linear-gradient(45deg, transparent 50%, var(--fg-faint) 50%),
+			linear-gradient(135deg, var(--fg-faint) 50%, transparent 50%);
 		background-position: calc(100% - 12px) 50%, calc(100% - 7px) 50%;
 		background-size: 5px 5px, 5px 5px;
 		background-repeat: no-repeat;
 	}
 	.lang-filter:focus {
 		outline: none;
-		border-color: #111;
+		border-color: var(--fg);
 	}
 
 	.add-buttons {
@@ -638,17 +688,17 @@
 		flex: 1;
 		text-align: left;
 		background: transparent;
-		border: 1px dashed #ccc;
+		border: 1px dashed var(--hairline);
 		padding: 1rem;
 		font-family: ui-sans-serif, system-ui, sans-serif;
 		font-size: 0.875rem;
 		cursor: pointer;
-		color: #666;
+		color: var(--fg-muted);
 		transition: border-color 0.2s;
 	}
 	.add-trigger:hover {
-		border-color: #111;
-		color: #111;
+		border-color: var(--fg);
+		color: var(--fg);
 	}
 
 	.add-form {
@@ -662,7 +712,7 @@
 		font-size: 0.75rem;
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
-		color: #888;
+		color: var(--fg-faint);
 	}
 
 	.form-row {
@@ -685,7 +735,8 @@
 	.add-form textarea {
 		appearance: none;
 		border: 1px solid transparent;
-		background: #f0f0f0;
+		background: var(--input-bg);
+		color: var(--fg);
 		padding: 0.75rem;
 		border-radius: 0;
 		outline: none;
@@ -694,7 +745,7 @@
 
 	.add-form input:focus,
 	.add-form textarea:focus {
-		background: #e8e8e8;
+		background: var(--input-bg-focus);
 	}
 
 	.input-mono.massive {
@@ -736,35 +787,35 @@
 	}
 
 	.primary-btn {
-		background: #111;
-		color: #fff;
+		background: var(--primary-bg);
+		color: var(--primary-fg);
 		padding: 0.5rem 1rem;
 		font-size: 0.875rem;
 		cursor: pointer;
 	}
 	.primary-btn:disabled {
-		background: #ccc;
+		background: var(--hairline);
 		cursor: not-allowed;
 	}
 
 	.text-btn {
 		background: transparent;
-		color: #666;
+		color: var(--fg-muted);
 		padding: 0;
 		font-size: 0.875rem;
 		text-decoration: underline;
 		cursor: pointer;
 	}
 	.text-btn:hover {
-		color: #111;
+		color: var(--fg);
 	}
 
 	.text-btn.danger {
-		color: #b00020;
+		color: var(--danger);
 		margin-left: auto;
 	}
 	.text-btn.danger:hover {
-		color: #7a0016;
+		color: var(--danger-hover);
 	}
 
 	.config-view h1 {
@@ -772,11 +823,12 @@
 		font-size: 2rem;
 		font-weight: normal;
 		margin: 0 0 0.5rem 0;
+		color: var(--fg);
 	}
 	.config-view p {
 		font-family: ui-sans-serif, sans-serif;
 		font-size: 0.875rem;
-		color: #666;
+		color: var(--fg-muted);
 		margin-bottom: 2rem;
 	}
 
@@ -791,20 +843,21 @@
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		margin-bottom: 0.5rem;
-		color: #333;
+		color: var(--fg-mid);
 	}
 	.field input {
 		width: 100%;
 		box-sizing: border-box;
 		padding: 0.75rem;
-		border: 1px solid #ccc;
+		border: 1px solid var(--hairline);
 		background: transparent;
+		color: var(--fg);
 		font-family: ui-monospace, monospace;
 		font-size: 0.875rem;
 		outline: none;
 	}
 	.field input:focus {
-		border-color: #111;
+		border-color: var(--fg);
 	}
 
 	@media (max-width: 480px) {

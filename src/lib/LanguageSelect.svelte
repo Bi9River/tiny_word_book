@@ -93,7 +93,8 @@
 		box-sizing: border-box;
 		appearance: none;
 		border: 1px solid transparent;
-		background: #f0f0f0;
+		background: var(--input-bg);
+		color: var(--fg);
 		padding: 0.75rem;
 		border-radius: 0;
 		outline: none;
@@ -102,7 +103,7 @@
 	}
 
 	.ls-input:focus {
-		background: #e8e8e8;
+		background: var(--input-bg-focus);
 	}
 
 	.ls-list {
@@ -113,8 +114,9 @@
 		margin: 0;
 		padding: 0;
 		list-style: none;
-		background: #fff;
-		border: 1px solid #111;
+		background: var(--surface);
+		color: var(--fg);
+		border: 1px solid var(--fg);
 		max-height: 240px;
 		overflow-y: auto;
 		z-index: 50;
@@ -132,8 +134,8 @@
 	}
 
 	.ls-item.active {
-		background: #111;
-		color: #fff;
+		background: var(--primary-bg);
+		color: var(--primary-fg);
 	}
 
 	.ls-native {
@@ -142,11 +144,11 @@
 
 	.ls-meta {
 		font-size: 0.75rem;
-		color: #888;
+		color: var(--fg-faint);
 		text-transform: lowercase;
 	}
 
 	.ls-item.active .ls-meta {
-		color: #ccc;
+		color: var(--primary-fg-muted);
 	}
 </style>

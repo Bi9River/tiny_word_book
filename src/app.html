@@ -4,7 +4,23 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="text-scale" content="scale" />
-		<meta name="theme-color" content="#111111" />
+		<meta name="theme-color" content="#fafafa" />
+		<script>
+			(function () {
+				try {
+					var saved = localStorage.getItem('vocab_theme');
+					var theme =
+						saved === 'light' || saved === 'dark'
+							? saved
+							: matchMedia('(prefers-color-scheme: dark)').matches
+								? 'dark'
+								: 'light';
+					document.documentElement.setAttribute('data-theme', theme);
+					var meta = document.querySelector('meta[name="theme-color"]');
+					if (meta) meta.setAttribute('content', theme === 'dark' ? '#0e0e0e' : '#fafafa');
+				} catch (e) {}
+			})();
+		</script>
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="tiny word book" />
