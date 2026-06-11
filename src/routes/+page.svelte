@@ -74,7 +74,7 @@
 			if (!q) return true;
 			return (
 				w.word.toLowerCase().includes(q) ||
-				w.translation.toLowerCase().includes(q) ||
+				(w.translation ?? '').toLowerCase().includes(q) ||
 				(w.notes ?? '').toLowerCase().includes(q)
 			);
 		});
@@ -145,7 +145,7 @@
 	}
 
 	async function saveEntry() {
-		if (!draft.word || !draft.translation || !addingType) return;
+		if (!draft.word || !addingType) return;
 		isSaving = true;
 
 		const wasEditing = editingId !== null;
@@ -333,7 +333,7 @@
 						<textarea
 							class="input-serif"
 							bind:value={draft.translation}
-							placeholder="Translation"
+							placeholder="Translation (optional)"
 						></textarea>
 					{:else}
 						<textarea
@@ -347,7 +347,7 @@
 						<textarea
 							class="input-serif"
 							bind:value={draft.translation}
-							placeholder="Translation"
+							placeholder="Translation (optional)"
 						></textarea>
 					{/if}
 
@@ -387,7 +387,9 @@
 						<div class="entry-meta">
 							{#if item.language}<span class="lang-tag">{item.language}</span>{/if}
 						</div>
-						<p class="translation-text">{@html highlight(item.translation, searchQuery)}</p>
+						{#if item.translation}
+							<p class="translation-text">{@html highlight(item.translation, searchQuery)}</p>
+						{/if}
 						{#if item.notes}
 							<p class="notes-text">{@html highlight(item.notes, searchQuery)}</p>
 						{/if}
@@ -403,7 +405,9 @@
 								<span class="lang-tag">{item.language}</span>
 							{/if}
 						</div>
-						<p class="translation-text">{@html highlight(item.translation, searchQuery)}</p>
+						{#if item.translation}
+							<p class="translation-text">{@html highlight(item.translation, searchQuery)}</p>
+						{/if}
 						{#if item.notes}
 							<p class="notes-text">{@html highlight(item.notes, searchQuery)}</p>
 						{/if}
