@@ -32,7 +32,7 @@
 	$: filteredWords = (() => {
 		const q = searchQuery.trim().toLowerCase();
 		const { typeFilter, languageFilter } = $view;
-		return words.filter((w) => {
+		const matched = words.filter((w) => {
 			const entryType = w.type ?? 'word';
 			if (typeFilter !== 'all' && entryType !== typeFilter) return false;
 			if (languageFilter && w.language !== languageFilter) return false;
@@ -43,6 +43,16 @@
 				(w.notes ?? '').toLowerCase().includes(q)
 			);
 		});
+
+		if (!q) return matched;
+
+		const wordsFirst: Entry[] = [];
+		const sentencesAfter: Entry[] = [];
+		for (const w of matched) {
+			if ((w.type ?? 'word') === 'word') wordsFirst.push(w);
+			else sentencesAfter.push(w);
+		}
+		return [...wordsFirst, ...sentencesAfter];
 	})();
 
 	onMount(async () => {
