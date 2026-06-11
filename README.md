@@ -1,42 +1,59 @@
-# sv
+# tiny_word_book
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A tiny personal vocabulary notebook. Stores words and sentences as JSON in a private GitHub repo so your data is yours, syncs everywhere, and costs nothing.
 
-## Creating a project
+## Setup
 
-If you're seeing this, you've probably already done this step. Congrats!
+### 1. Create a private repo for your data
 
-```sh
-# create a new project
-npx sv create my-app
+Create a private repo on GitHub (e.g. `vocab_data`). Add an empty `words.json`:
+
+```json
+[]
 ```
 
-To recreate this project with the same configuration:
+That's it. The app will read and update this file as you go.
+
+### 2. Generate a Personal Access Token
+
+GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token.
+
+- Resource owner: yourself
+- Repository access: only the data repo (e.g. `vocab_data`)
+- Repository permissions: **Contents → Read and write**
+
+Copy the token (`github_pat_...`). You won't see it again.
+
+### 3. Open the app and configure
+
+On first launch you'll see a config screen. Enter:
+
+- GitHub username
+- Repository name (e.g. `vocab_data`)
+- Personal access token
+
+Saved locally in your browser's `localStorage`. Never sent anywhere except GitHub's API.
+
+## Usage
+
+- `+ Add word` and `+ Add sentence` — record what you're learning.
+- Search the list, filter by type or language. Filters persist across sessions.
+- Hover (or tap) a card's top-right `edit` button to edit or delete it.
+
+## Develop locally
+
+Requires Node ≥ 20.
 
 ```sh
-# recreate this project
-npx sv@0.16.1 create --template minimal --types ts --add prettier eslint --install npm tiny_word_book
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+## Build & deploy
 
-To create a production version of your app:
+The repo includes a GitHub Actions workflow that builds and publishes to GitHub Pages on every push to `main`.
 
 ```sh
 npm run build
+npm run preview
 ```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
