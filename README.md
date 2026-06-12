@@ -1,6 +1,6 @@
 # tiny_word_book
 
-A tiny personal vocabulary notebook. Stores words and sentences as JSON in a private GitHub repo so your data is yours, syncs everywhere, and costs nothing.
+A tiny personal vocabulary notebook. Stores words and sentences as JSON in a private GitHub repo so your data is yours, syncs everywhere, no backend or server needed, and costs nothing.
 
 ## Setup
 
