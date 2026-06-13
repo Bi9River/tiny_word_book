@@ -3,21 +3,17 @@
 	import { settings } from '$lib/settings';
 	import { view } from '$lib/view';
 	import { theme, toggleTheme } from '$lib/theme';
-	import { testConnection, fetchWords, syncWordsToCloud } from '$lib/github';
 	import LanguageSelect from '$lib/LanguageSelect.svelte';
-	import { resolveLanguage } from '$lib/languages';
-	import { swedishOrdklasser } from '$lib/pos';
-
-	type EntryType = 'word' | 'sentence';
-	interface Entry {
-		type?: EntryType;
-		word: string;
-		language: string;
-		translation: string;
-		notes: string;
-		pos?: string;
-		created_at: string;
-	}
+	import {
+		testConnection,
+		fetchWords,
+		syncWordsToCloud,
+		resolveLanguage,
+		swedishOrdklasser,
+		highlight,
+		type Entry,
+		type EntryType
+	} from '@tiny-word-book/shared';
 
 	let currentView: 'loading' | 'settings' | 'dictionary' = 'loading';
 	let words: Entry[] = [];
@@ -36,37 +32,6 @@
 	$: availableLanguages = Array.from(
 		new Set(words.map((w) => w.language).filter((l): l is string => Boolean(l)))
 	).sort((a, b) => a.localeCompare(b));
-
-	function escapeHtml(s: string): string {
-		return s
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#39;');
-	}
-
-	function escapeRegex(s: string): string {
-		return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	}
-
-	function highlight(text: string, query: string): string {
-		const safeText = text ?? '';
-		const q = query.trim();
-		if (!q) return escapeHtml(safeText);
-		const re = new RegExp(escapeRegex(q), 'gi');
-		let result = '';
-		let lastIndex = 0;
-		let match: RegExpExecArray | null;
-		while ((match = re.exec(safeText)) !== null) {
-			result += escapeHtml(safeText.slice(lastIndex, match.index));
-			result += `<strong class="hl">${escapeHtml(match[0])}</strong>`;
-			lastIndex = match.index + match[0].length;
-			if (match[0].length === 0) re.lastIndex++;
-		}
-		result += escapeHtml(safeText.slice(lastIndex));
-		return result;
-	}
 
 	$: filteredWords = (() => {
 		const q = searchQuery.trim().toLowerCase();
@@ -106,8 +71,8 @@
 	async function loadDictionary() {
 		currentView = 'loading';
 		try {
-			await testConnection();
-			const data = await fetchWords();
+			await testConnection($settings);
+			const data = await fetchWords($settings);
 			words = data.words;
 			currentSha = data.sha;
 			currentView = 'dictionary';
@@ -187,7 +152,7 @@
 		}
 
 		try {
-			currentSha = await syncWordsToCloud(updatedWords, currentSha);
+			currentSha = await syncWordsToCloud($settings, updatedWords, currentSha);
 			words = updatedWords;
 			draft = { word: '', language: '', translation: '', notes: '', pos: '' };
 			addingType = null;
@@ -209,7 +174,7 @@
 		const updatedWords = words.filter((w) => w.created_at !== editingId);
 
 		try {
-			currentSha = await syncWordsToCloud(updatedWords, currentSha);
+			currentSha = await syncWordsToCloud($settings, updatedWords, currentSha);
 			words = updatedWords;
 			draft = { word: '', language: '', translation: '', notes: '', pos: '' };
 			addingType = null;

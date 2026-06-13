@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { searchLanguages, type Language } from './languages';
+	import { searchLanguages, type Language } from '@tiny-word-book/shared';
 
 	export let value: string = '';
 	export let placeholder: string = 'Language (e.g. sv, svenska)';
