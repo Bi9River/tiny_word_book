@@ -1,6 +1,11 @@
-# tiny_word_book
+# tiny word book
 
-A tiny personal vocabulary notebook. Stores words and sentences as JSON in a private GitHub repo so your data is yours, syncs everywhere, no backend or server needed, and costs nothing.
+A tiny personal vocabulary notebook. Words and sentences are stored as JSON in a private GitHub repo of your own, so your data is yours, syncs everywhere, and costs nothing.
+
+Two ways to use it:
+
+- **Web app** — a PWA you can install on any device. Add, search, filter, edit.
+- **Chrome extension** — highlight a word or sentence on any page, hit `Cmd+Shift+K`, done. Triage translations later in the web app.
 
 ## Setup
 
@@ -12,7 +17,7 @@ Create a private repo on GitHub (e.g. `vocab_data`). Add an empty `words.json`:
 []
 ```
 
-That's it. The app will read and update this file as you go.
+The app reads and updates this file as you go.
 
 ### 2. Generate a Personal Access Token
 
@@ -24,36 +29,48 @@ GitHub → Settings → Developer settings → Personal access tokens → **Fine
 
 Copy the token (`github_pat_...`). You won't see it again.
 
-### 3. Open the app and configure
+### 3. Configure the app
 
-On first launch you'll see a config screen. Enter:
+Open the web app (or the extension's options page) and enter:
 
 - GitHub username
 - Repository name (e.g. `vocab_data`)
 - Personal access token
 
-Saved locally in your browser's `localStorage`. Never sent anywhere except GitHub's API.
+Saved locally (browser `localStorage` for the web app, `chrome.storage.sync` for the extension). Never sent anywhere except GitHub's API.
 
 ## Usage
 
-- `+ Add word` and `+ Add sentence` — record what you're learning.
-- Search the list, filter by type or language. Filters persist across sessions.
-- Hover (or tap) a card's top-right `edit` button to edit or delete it.
+### Web app
+
+- `+ Add word` / `+ Add sentence` — record what you're learning.
+- Search by word, translation, notes, or part of speech. Words rank above sentences.
+- Filter by type, language, or **pending** (entries captured by the extension that still need a translation). Filters persist across sessions.
+- Hover (or tap) a card's top-right `edit` button to edit or delete.
+- Dark mode toggle in the header. Respects your system preference on first launch.
+
+### Chrome extension
+
+- Highlight text on any webpage and press `Cmd+Shift+K` (or `Ctrl+Shift+K` on Linux/Windows), or right-click → **Save to Tiny Word Book**.
+- Single token → saved as a word; multiple → as a sentence.
+- The page's language is auto-detected; the entry is marked **pending** for you to translate later in the web app.
 
 ## Develop locally
 
-Requires Node ≥ 20.
+Requires Node ≥ 20. Monorepo with npm workspaces under `packages/`:
+
+- `packages/web` — SvelteKit PWA
+- `packages/extension` — Chrome extension (Manifest V3)
+- `packages/shared` — types, GitHub client, language data
 
 ```sh
 npm install
-npm run dev
+npm run dev          # web app at http://localhost:5173
+npm run dev:ext      # extension dev build (load `packages/extension/dist` as unpacked)
+npm run check        # type-check both packages
 ```
 
-## Build & deploy
+## Release
 
-The repo includes a GitHub Actions workflow that builds and publishes to GitHub Pages on every push to `main`.
-
-```sh
-npm run build
-npm run preview
-```
+- **Web** — every push to `main` builds and deploys to GitHub Pages via Actions.
+- **Extension** — bump `version` in `packages/extension/public/manifest.json` and push. Actions builds, zips, and publishes a GitHub Release with the `.zip` attached. You can also tag manually with `ext-v<version>`.
