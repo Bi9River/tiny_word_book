@@ -2,6 +2,10 @@
 
 A tiny personal vocabulary notebook. Words and sentences are stored as JSON in a private GitHub repo of your own, so your data is yours, syncs everywhere, and costs nothing.
 
+It's core storage is done inside a private GitHub repo of yours. The access does not require a backend or a database; instead, as long as you save the private word repo token securely, you can always record words / sentences.
+
+Frontend is deployable via GitHub Pages. Very easy.
+
 Two ways to use it:
 
 - **Web app** — a PWA you can install on any device. Add, search, filter, edit.
