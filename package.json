@@ -8,9 +8,12 @@
 	],
 	"scripts": {
 		"dev": "npm run dev -w @tiny-word-book/web",
+		"dev:ext": "npm run dev -w @tiny-word-book/extension",
 		"build": "npm run build -w @tiny-word-book/web",
+		"build:ext": "npm run build -w @tiny-word-book/extension",
+		"build:all": "npm run build && npm run build:ext",
 		"preview": "npm run preview -w @tiny-word-book/web",
-		"check": "npm run check -w @tiny-word-book/web",
+		"check": "npm run check -w @tiny-word-book/web && npm run check -w @tiny-word-book/extension",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write ."
 	},

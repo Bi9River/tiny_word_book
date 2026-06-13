@@ -1,0 +1,17 @@
+{
+	"extends": "@tsconfig/svelte/tsconfig.json",
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"types": ["chrome", "svelte", "vite/client"]
+	},
+	"include": ["src/**/*", "popup.html", "options.html"]
+}

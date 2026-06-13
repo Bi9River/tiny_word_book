@@ -1,0 +1,23 @@
+{
+	"name": "@tiny-word-book/extension",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite build --watch --mode development",
+		"build": "vite build",
+		"check": "svelte-check --tsconfig ./tsconfig.json"
+	},
+	"dependencies": {
+		"@tiny-word-book/shared": "*"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@tsconfig/svelte": "^5.0.4",
+		"@types/chrome": "^0.1.21",
+		"svelte": "^5.56.1",
+		"svelte-check": "^4.6.0",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.16"
+	}
+}

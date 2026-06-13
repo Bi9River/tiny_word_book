@@ -7,5 +7,6 @@ export interface Entry {
 	translation: string;
 	notes: string;
 	pos?: string;
+	pending?: boolean;
 	created_at: string;
 }
