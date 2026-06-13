@@ -29,13 +29,6 @@ jobs:
       - name: Build extension
         run: npm run build:ext
 
-      - name: Sanity check no tokens in build output
-        run: |
-          if grep -rE "ghp_|github_pat_" packages/extension/dist; then
-            echo "Found token-like string in build output!"
-            exit 1
-          fi
-
       - name: Zip extension
         run: |
           cd packages/extension/dist

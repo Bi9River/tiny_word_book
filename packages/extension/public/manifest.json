@@ -1,5 +1,5 @@
 {
-	"manifest_version": 3,
+	"manifest_version": 5,
 	"name": "Tiny Word Book",
 	"short_name": "tiny word book",
 	"description": "Save words and sentences to your private GitHub-backed word book.",

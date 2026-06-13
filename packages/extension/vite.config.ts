@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
 	plugins: [svelte()],
 	publicDir: 'public',
 	build: {
@@ -13,7 +13,7 @@ export default defineConfig({
 		emptyOutDir: true,
 		target: 'esnext',
 		minify: false,
-		sourcemap: true,
+		sourcemap: mode === 'development',
 		rollupOptions: {
 			input: {
 				popup: resolve(__dirname, 'popup.html'),
@@ -27,4 +27,4 @@ export default defineConfig({
 			}
 		}
 	}
-});
+}));
