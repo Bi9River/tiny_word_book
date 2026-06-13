@@ -1,0 +1,48 @@
+name: Release extension
+
+on:
+  push:
+    tags: ['ext-v*']
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build:ext
+
+      - name: Sanity check no tokens in build output
+        run: |
+          if grep -rE "ghp_|github_pat_" packages/extension/dist; then
+            echo "Found token-like string in build output!"
+            exit 1
+          fi
+
+      - name: Zip extension
+        run: |
+          cd packages/extension/dist
+          zip -r "../../../tiny-word-book-${{ github.ref_name }}.zip" .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tiny-word-book-${{ github.ref_name }}.zip
+          generate_release_notes: true

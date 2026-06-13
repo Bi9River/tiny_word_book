@@ -1,0 +1,75 @@
+name: Release extension on version bump
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/extension/public/manifest.json'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      should_release: ${{ steps.meta.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: meta
+        run: |
+          VERSION=$(jq -r '.version' packages/extension/public/manifest.json)
+          TAG="ext-v$VERSION"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    needs: detect
+    if: needs.detect.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build:ext
+
+      - name: Sanity check no tokens in build output
+        run: |
+          if grep -rE "ghp_|github_pat_" packages/extension/dist; then
+            echo "Found token-like string in build output!"
+            exit 1
+          fi
+
+      - name: Zip extension
+        run: |
+          cd packages/extension/dist
+          zip -r "../../../tiny-word-book-${{ needs.detect.outputs.tag }}.zip" .
+
+      - name: Push tag
+        run: |
+          git tag ${{ needs.detect.outputs.tag }}
+          git push origin ${{ needs.detect.outputs.tag }}
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.detect.outputs.tag }}
+          files: tiny-word-book-${{ needs.detect.outputs.tag }}.zip
+          generate_release_notes: true
