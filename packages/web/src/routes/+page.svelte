@@ -33,13 +33,16 @@
 		new Set(words.map((w) => w.language).filter((l): l is string => Boolean(l)))
 	).sort((a, b) => a.localeCompare(b));
 
+	$: pendingCount = words.filter((w) => w.pending).length;
+
 	$: filteredWords = (() => {
 		const q = searchQuery.trim().toLowerCase();
-		const { typeFilter, languageFilter } = $view;
+		const { typeFilter, languageFilter, pendingOnly } = $view;
 		const matched = words.filter((w) => {
 			const entryType = w.type ?? 'word';
 			if (typeFilter !== 'all' && entryType !== typeFilter) return false;
 			if (languageFilter && w.language !== languageFilter) return false;
+			if (pendingOnly && !w.pending) return false;
 			if (!q) return true;
 			return (
 				w.word.toLowerCase().includes(q) ||
@@ -125,19 +128,20 @@
 		const posForType = addingType === 'word' && isSwedishDraft ? draft.pos : '';
 
 		if (wasEditing) {
-			updatedWords = words.map((w) =>
-				w.created_at === editingId
-					? {
-							...w,
-							type: addingType ?? w.type,
-							word: draft.word,
-							language: draft.language,
-							translation: draft.translation,
-							notes: draft.notes,
-							pos: posForType
-						}
-					: w
-			);
+			updatedWords = words.map((w) => {
+				if (w.created_at !== editingId) return w;
+				const updated: Entry = {
+					...w,
+					type: addingType ?? w.type,
+					word: draft.word,
+					language: draft.language,
+					translation: draft.translation,
+					notes: draft.notes,
+					pos: posForType
+				};
+				delete updated.pending;
+				return updated;
+			});
 		} else {
 			const newEntry: Entry = {
 				type: addingType,
@@ -275,6 +279,15 @@
 						<option value={lang}>{lang}</option>
 					{/each}
 				</select>
+
+				<button
+					class="toggle-btn"
+					class:active={$view.pendingOnly}
+					on:click={() => view.update((v) => ({ ...v, pendingOnly: !v.pendingOnly }))}
+					aria-pressed={$view.pendingOnly}
+				>
+					Pending{pendingCount > 0 ? ` (${pendingCount})` : ''}
+				</button>
 			</div>
 
 			{#if !addingType}
@@ -362,13 +375,14 @@
 
 			{#each filteredWords as item (item.created_at)}
 				{#if item.type === 'sentence'}
-					<article class="sentence-entry">
+					<article class="sentence-entry" class:is-pending={item.pending}>
 						<button class="edit-btn" on:click={() => startEdit(item)} aria-label="Edit entry">
 							edit
 						</button>
 						<blockquote class="sentence-text">{@html highlight(item.word, searchQuery)}</blockquote>
 						<div class="entry-meta">
 							{#if item.language}<span class="lang-tag">{item.language}</span>{/if}
+							{#if item.pending}<span class="pending-tag" title="No translation yet">pending</span>{/if}
 						</div>
 						{#if item.translation}
 							<p class="translation-text">{@html highlight(item.translation, searchQuery)}</p>
@@ -378,7 +392,7 @@
 						{/if}
 					</article>
 				{:else}
-					<article class="word-entry">
+					<article class="word-entry" class:is-pending={item.pending}>
 						<button class="edit-btn" on:click={() => startEdit(item)} aria-label="Edit entry">
 							edit
 						</button>
@@ -389,6 +403,9 @@
 							{/if}
 							{#if item.pos}
 								<span class="pos-tag">{item.pos}</span>
+							{/if}
+							{#if item.pending}
+								<span class="pending-tag" title="No translation yet">pending</span>
 							{/if}
 						</div>
 						{#if item.translation}
@@ -564,6 +581,21 @@
 		color: var(--fg-muted);
 	}
 
+	.pending-tag {
+		font-family: ui-sans-serif, system-ui, sans-serif;
+		font-size: 0.6875rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--fg-muted);
+		border: 1px solid var(--hairline-2);
+		padding: 0.05rem 0.4rem;
+	}
+
+	.is-pending .word-text,
+	.is-pending .sentence-text {
+		opacity: 0.85;
+	}
+
 	.translation-text {
 		margin: 0 0 0.5rem 0;
 		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
@@ -652,6 +684,27 @@
 	.seg-btn.active {
 		background: var(--primary-bg);
 		color: var(--primary-fg);
+	}
+
+	.toggle-btn {
+		appearance: none;
+		background: transparent;
+		border: 1px solid var(--hairline-2);
+		padding: 0.35rem 0.75rem;
+		font-family: ui-sans-serif, system-ui, sans-serif;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--fg-muted);
+		cursor: pointer;
+	}
+	.toggle-btn:hover {
+		color: var(--fg);
+	}
+	.toggle-btn.active {
+		background: var(--primary-bg);
+		color: var(--primary-fg);
+		border-color: var(--primary-bg);
 	}
 
 	.lang-filter {

@@ -6,11 +6,13 @@ export type TypeFilter = 'all' | 'word' | 'sentence';
 export interface View {
 	typeFilter: TypeFilter;
 	languageFilter: string;
+	pendingOnly: boolean;
 }
 
 const defaultView: View = {
 	typeFilter: 'all',
-	languageFilter: ''
+	languageFilter: '',
+	pendingOnly: false
 };
 
 const STORAGE_KEY = 'vocab_view';
